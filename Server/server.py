@@ -1,3 +1,4 @@
+from os import write
 from default import *
 from client_interface import ClientInterface
 
@@ -30,8 +31,10 @@ class Server:
         print("Client connected")
         while True:
             request = client.get_request()
-            if request:
-                pass
+            if request["cmd"] == "register":
+                write("users", request["data"])
+
+
 
 
 if __name__ == '__main__':
