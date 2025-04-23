@@ -1,3 +1,5 @@
+from http.client import responses
+
 from default import *
 
 class App:
@@ -7,8 +9,10 @@ class App:
         self.root.title("HobbyTalk")
         self.current_screen = None
         self.show_login_screen()
+        self.client = Client()
 
-    def run(self):        self.root.mainloop()
+    def run(self):
+        self.root.mainloop()
 
     def clear_screen(self):
         if self.current_screen:
@@ -36,14 +40,22 @@ class App:
         print("Username:", username)
         print("Password:", password)
         print("Bio:", bio)
-        print("Hob]bies:", hobbies)
-        messagebox.showinfo("Success", "Fake registration successful! Redirecting to login.")
-        self.show_login_screen()
+        print("Hobbies:", hobbies)
+        status = self.client.send_request("register", {"username": username, "password": password, "bio": bio, "hobbies": hobbies})
+        if status:
+            self.show_login_screen()
+            messagebox.showinfo("Register Completed Successfully", "The user have been created.")
 
-    @staticmethod
-    def handle_login(username, password):
+
+    def handle_login(self, username, password):
         print("Login clicked!")
         print("Username:", username)
         print("Password:", password)
+        status = self.client.send_request("")
         messagebox.showinfo("Login", "Fake login successful!")
         # self.show_lobby_screen(username)  # Placeholder
+
+
+if __name__ == '__main__':
+    app = App()
+    app.run()

@@ -9,7 +9,7 @@ HOBBIES = [
 
 class RegisterScreen(BaseScreen):
     def __init__(self, master, register_callback, go_to_login):
-        super().__init__(master, title="Register", size="400x500")
+        super().__init__(master, title="Register", size="400x650")
 
         self.register_callback = register_callback
         self.go_to_login = go_to_login
