@@ -14,6 +14,7 @@ class RegisterScreen(BaseScreen):
         self.register_callback = register_callback
         self.go_to_login = go_to_login
         self.selected_hobbies = []
+        self.master.geometry("600x900")
 
         # Username
         tk.Label(self.frame, text="Username").pack(pady=5)
