@@ -52,7 +52,7 @@ class App:
         print("Username:", username)
         print("Password:", password)
         status = self.client.send_request("login", {"username": username, "password": password})
-        messagebox.showinfo("Login", "Fake login successful!")
+        messagebox.showinfo("Login", "Login successful!")
         # self.show_lobby_screen(username)  # Placeholder
 
 

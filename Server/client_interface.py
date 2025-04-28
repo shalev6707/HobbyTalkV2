@@ -16,13 +16,12 @@ class ClientInterface:
         :return: dict of requests or None
         """
         try:
-            request = self.client_socket.recv(1024)
-            str_request = request.decode()
-            json_request = json.loads(str_request)
-            if "cmd" not in json_request or "data" not in json_request or type(json_request["data"]) != dict or type(json_request["cmd"]) != str:
+            data = self.client_socket.recv(1024).decode()
+            if not data:
                 return None
-            return json_request
-        finally:
+            return json.loads(data)
+        except Exception as e:
+            print(f"Error getting request: {e}")
             return None
 
     def send_response(self, cmd:str, code: int, msg: str) -> bool:
