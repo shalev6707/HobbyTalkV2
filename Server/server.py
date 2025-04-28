@@ -25,49 +25,42 @@ class Server:
             threading.Thread(target=self.handle_client, args=[client]).start()
 
     def handle_client(self, client: ClientInterface):
-        """
-        Handles client connection.
-        :param client: the client to handle
-        """
         print("Client connected")
         while True:
             try:
                 request = client.get_request()
                 if request is None:
                     print("Client disconnected or sent invalid data.")
-                    break  # Safely exit the loop
+                    break
+
+                print(f"Received request: {request}")
 
                 if "cmd" not in request or "data" not in request:
                     client.send_response("error", 400, "Invalid request format.")
                     continue
 
                 if request["cmd"] == "register":
-                    DBManager.write("users", request["data"])
-                    client.send_response("register", 200, "Registration was successful")
-
+                    try:
+                        DBManager.write("users", request["data"])
+                        client.send_response("register", 200, "Registration was successful")
+                    except Exception as e:
+                        print("DB write error:", e)
+                        client.send_response("register", 500, "Server DB Error")
 
                 elif request["cmd"] == "login":
-
-                    users = DBManager.read("users")
-
-                    user = next((u for u in users if
-                                 u["username"] == request["data"]["username"] and u["password"] == request["data"][
-                                     "password"]), None)
-
-                    if user:
-
+                    try:
+                        DBManager.read("users")
                         client.send_response("login", 200, "Login was successful")
-
-                    else:
-
-                        client.send_response("login", 401, "Invalid username or password")
-
+                    except Exception as e:
+                        print("DB read error:", e)
+                        client.send_response("login", 500, "Server DB Error")
 
                 else:
                     client.send_response("error", 400, f"Unknown command: {request['cmd']}")
 
             except Exception as e:
                 print("Error handling client:", e)
+                client.send_response("error", 500, "Internal Server Error")
                 break
 
         client.client_socket.close()
