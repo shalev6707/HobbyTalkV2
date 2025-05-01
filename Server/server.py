@@ -56,16 +56,11 @@ class Server:
                         username = request["data"]["username"]
                         password = request["data"]["password"]
 
-                        # Find a user that matches both username and password
-                        matching_user = next(
-                            (user for user in users if user["username"] == username and user["password"] == password),
-                            None
-                        )
-
-                        if matching_user:
+                        if username in users and password == request["data"]["password"]:
                             client.send_response("login", 200, "Login was successful")
+                            print("Login was successful")
                         else:
-                            client.send_response("login", 401, "Invalid username or password")
+                            client.send_response("login", 400, "Invalid username or password.")
 
                     except Exception as e:
                         print("DB read error:", e)
