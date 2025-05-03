@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from default import *
 
 class Client:
@@ -10,30 +12,29 @@ class Client:
         except Exception as e:
             print(e)
 
-    def send_request(self, cmd: str, data: dict) -> bool:
+    def send_request(self, cmd: str, data: dict) -> Tuple[bool, dict]:
         if not self.sock:
             print("Socket not connected.")
-            return False
+            return False, {}
 
         try:
-            # Build the message
             message = {
                 "cmd": cmd,
                 "data": data
             }
-            # Send JSON-encoded data
-            json_data = json.dumps(message)
-            self.sock.sendall(json_data.encode())
-
-            # Receive and decode server response
+            self.sock.sendall(json.dumps(message).encode())
             response = self.sock.recv(1024).decode()
-            response_data = json.loads(response)
 
-            return response_data.get("cmd") == cmd and response_data.get("code") == 200
+            if not response:
+                return False, {}
+
+            response_data = json.loads(response)
+            success = response_data.get("code") == 200
+            return success, response_data.get("data", {})
 
         except Exception as e:
             print("Send request error:", e)
-            return False
+            return False, {}
 
 
 if __name__ == '__main__':

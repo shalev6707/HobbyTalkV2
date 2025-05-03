@@ -1,8 +1,6 @@
 from Server.DataBase.DatabaseManager import DBManager
 from default import *
-from client_interface import ClientInterface
-
-
+from Server.client_interface import ClientInterface
 
 class Server:
     def __init__(self):
@@ -12,6 +10,7 @@ class Server:
         # Create a socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
+        self.active_users = []
 
     def run(self):
         """
@@ -30,6 +29,7 @@ class Server:
 
         :param client: The client to handle.
         """
+        global username
         print("Client connected")
         while True:
             try:
@@ -46,36 +46,37 @@ class Server:
 
                 # Handle 'register' command
                 if request["cmd"] == "register":
-                    DBManager.write("users", request["data"])
+                    DBManager.write("users", {request["data"]["username"]: request["data"]})
                     client.send_response("register", 200, "Registration was successful")
 
                 # Handle 'login' command
                 elif request["cmd"] == "login":
-                    try:
-                        users = DBManager.read("users")  # Read all users from the database
-                        username = request["data"]["username"]
-                        password = request["data"]["password"]
+                    username = request["data"]["username"]
+                    password = request["data"]["password"]
+                    users = DBManager.read("users")
 
-                        if username in users and password == request["data"]["password"]:
-                            client.send_response("login", 200, "Login was successful")
-                            print("Login was successful")
-                        else:
-                            client.send_response("login", 400, "Invalid username or password.")
+                    if username in users and users[username]["password"] == password:
+                        client.send_response("login", 200, "Login successful")
+                        self.active_users.append(username)
+                    else:
+                        client.send_response("login", 401, "Invalid username or password")
+                elif request["cmd"] == "matching":
+                    users = DBManager.read("users")
+                    user_hobbies = users[request["data"]["username"]]["hobbies"]
+                    matches = {}
+                    for user in users:
+                        matches[user] = 0
+                        for hobby in users[user]["hobbies"]:
+                            if hobby in user_hobbies[user]["hobbies"]:
+                                matches[user] += 1
+                    client.send_response("matching", 200, json.dumps(matches))
+                elif request["cmd"] == "logout":
+                    if username in self.active_users:
+                        client.send_response("logout", 200, "Logout successful")
+                        del self.active_users[username]
 
-                    except Exception as e:
-                        print("DB read error:", e)
-                        client.send_response("login", 500, "Server DB Error")
 
-                # Handle 'get_users' command (optional)
-                elif request["cmd"] == "get_users":
-                    try:
-                        users = DBManager.read("users")
-                        client.send_response("get_users", 200, users)
-                    except Exception as e:
-                        print("DB read error:", e)
-                        client.send_response("get_users", 500, "Server DB Error")
 
-                # Unknown command
                 else:
                     client.send_response("error", 400, f"Unknown command: {request['cmd']}")
 

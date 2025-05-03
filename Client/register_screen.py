@@ -15,6 +15,7 @@ class RegisterScreen(BaseScreen):
         self.go_to_login = go_to_login
         self.selected_hobbies = []
         self.master.geometry("600x900")
+        self.master.title("Register")
 
         # Username
         tk.Label(self.frame, text="Username").pack(pady=5)

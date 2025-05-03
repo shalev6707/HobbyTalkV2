@@ -21,7 +21,7 @@ class ClientInterface:
                 return None
             return json.loads(data)
         except Exception as e:
-            print(f"Error getting request: {e}")
+            print("Error receiving data:", e)
             return None
 
     def send_response(self, cmd:str, code: int, msg: str) -> bool:

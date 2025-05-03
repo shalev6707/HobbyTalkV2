@@ -1,5 +1,7 @@
-from http.client import responses
 
+
+from Client.lobby_screen import LobbyScreen
+from Server.DataBase.DatabaseManager import DBManager
 from default import *
 
 class App:
@@ -8,8 +10,10 @@ class App:
         self.root.geometry("400x500")
         self.root.title("HobbyTalk")
         self.current_screen = None
-        self.show_login_screen()
         self.client = Client()
+        self.show_login_screen()
+        self.username = None
+
 
     def run(self):
         self.root.mainloop()
@@ -24,7 +28,8 @@ class App:
         self.current_screen = LoginScreen(
             master=self.root,
             login_callback=self.handle_login,
-            go_to_register=self.show_register_screen
+            go_to_register=self.show_register_screen,
+            client=self.client
         )
 
     def show_register_screen(self):
@@ -35,6 +40,15 @@ class App:
             go_to_login=self.show_login_screen
         )
 
+    def show_lobby_screen(self, username):
+        self.clear_screen()
+        self.current_screen = LobbyScreen(
+            master=self.root,
+            app=self,
+            client=self.client,
+            username=username  # ← required by your LobbyScreen
+        )
+
     def handle_register(self, username, password, bio, hobbies):
         print("Register clicked!")
         print("Username:", username)
@@ -43,17 +57,30 @@ class App:
         print("Hobbies:", hobbies)
         status = self.client.send_request("register", {"username": username, "password": password, "bio": bio, "hobbies": hobbies})
         if status:
-            self.show_login_screen()
             messagebox.showinfo("Register Completed Successfully", "The user have been created.")
-
+            self.show_login_screen()
 
     def handle_login(self, username, password):
         print("Login clicked!")
-        print("Username:", username)
-        print("Password:", password)
         status = self.client.send_request("login", {"username": username, "password": password})
-        messagebox.showinfo("Login", "Login successful!")
-        # self.show_lobby_screen(username)  # Placeholder
+
+        if status:
+            messagebox.showinfo("Login", "Login successful!")
+            self.username = username
+            self.show_lobby_screen(self.username)
+        else:
+            messagebox.showerror("Login Failed", "Invalid username or password.")
+
+    def handle_logout(self,username):
+        print("Logout clicked!")
+        users = DBManager.read("users")
+        status = self.client.send_request("logout", {"username": username})
+        if status:
+            print("Logout successful!")
+            self.username = None
+            self.clear_screen()
+            self.show_login_screen()
+            messagebox.showinfo("Logout", "Logout successful!")
 
 
 if __name__ == '__main__':
