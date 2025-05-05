@@ -65,7 +65,6 @@ class App:
         status = self.client.send_request("login", {"username": username, "password": password})
 
         if status:
-            messagebox.showinfo("Login", "Login successful!")
             self.username = username
             self.show_lobby_screen(self.username)
         else:
@@ -73,7 +72,7 @@ class App:
 
     def handle_logout(self,username):
         print("Logout clicked!")
-        users = DBManager.read("users")
+        users = DBManager.read("users.json")
         status = self.client.send_request("logout", {"username": username})
         if status:
             print("Logout successful!")
