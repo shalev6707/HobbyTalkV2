@@ -40,5 +40,5 @@ class LoginScreen(BaseScreen):
             self.login_callback(username, password)
 
         else:
-            messagebox.showerror("Error", "Login Failed")
+            messagebox.showerror("Error", "Incorrect username or password")
 

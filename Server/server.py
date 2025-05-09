@@ -17,6 +17,7 @@ class Server:
         Runs the server
         """
         print("Server starting...")
+        print(self.active_users)
         self.socket.listen()
         while True:
             sock, addr = self.socket.accept()
@@ -50,20 +51,30 @@ class Server:
                     password = request["data"]["password"]
                     bio = request["data"]["bio"]
                     hobbies = request["data"]["hobbies"]
+
                     data = DBManager.read("users.json")
                     if data is None:
-                        DBManager.write("users.json", request["data"])
+                        data = {}  # Initialize if file is empty or missing
+
+                    if username in data:
+                        client.send_response("register", 409, "Username already exists.")
                     else:
-                        data[username] = request[username,password,bio,str(hobbies)]
-                        DBManager.write("users.json", data[username])
-                    client.send_response("register", 200, "Registration was successful")
+                        data[username] = {
+                            "username": username,
+                            "password": password,
+                            "bio": bio,
+                            "hobbies": hobbies
+                        }
+                        DBManager.write("users.json", data)
+                        client.send_response("register", 200, "Registration was successful.")
+
 
                 elif request["cmd"] == "login":
                     username = request["data"]["username"]
                     password = request["data"]["password"]
                     users = DBManager.read("users.json")
 
-                    if username in users and users[username]["password"] == password:
+                    if username in users and users[username]["password"] == password and username not in self.active_users:
                         client.send_response("login", 200, "Login successful")
                         self.active_users.append(username)
                         print(self.active_users)
@@ -73,41 +84,40 @@ class Server:
                 elif request["cmd"] == "matching":
                     username = request["data"]["username"]
                     users = DBManager.read("users.json")
-                    if username not in users:
+                    active_users = self.active_users
+
+                    if not users or username not in users:
                         client.send_response("matching", 404, "User not found")
                         return
+
                     user_hobbies = set(users[username]["hobbies"])
-                    matches = {}
-                    for other_username in self.active_users:
-                        if other_username == username or other_username not in users:
-                            continue
-                        other_hobbies = set(users[other_username]["hobbies"])
-                        shared_hobbies = user_hobbies & other_hobbies
-                        match_score = len(shared_hobbies)
-                        matches[other_username] = {
-                            "bio": users[other_username]["bio"],
-                            "score": match_score
-                        }
+                    matches = []
 
-                    # Sort by score descending
+                    for user, info in users.items():
+                        if user == username or user not in active_users:
+                            continue  # Skip self and offline users
 
-                    sorted_matches = dict(sorted(matches.items(), key=lambda item: item[1]["score"], reverse=True))
+                        common = user_hobbies.intersection(info["hobbies"])
+                        match_score = len(common)
+                        matches.append({
+                            "username": user,
+                            "score": match_score,
+                            "bio": info.get("bio", "")
+                        })
 
-                    client.send_response("matching", 200, json.dumps(sorted_matches))
+                    # Sort matches by score descending
+                    matches.sort(key=lambda x: x["score"], reverse=True)
+                    client.send_response("matching", 200, str(matches))
+
 
                 elif request["cmd"] == "logout":
+                    username = request["data"].get("username")
                     if username in self.active_users:
+                        self.active_users.remove(username)
                         client.send_response("logout", 200, "Logout successful")
-                        index = 0
-                        for user in self.active_users:
-                            if user == username:
-                                del self.active_users[index]
-                                print(self.active_users)
-                                break
-                            index += 1
+                        print(f"{username} removed from active users. Current: {self.active_users}")
                     else:
-                        client.send_response("logout", 401, "user not found")
-
+                        client.send_response("logout", 401, "User not found in active users")
 
                 else:
                     client.send_response("error", 400, f"Unknown command: {request['cmd']}")

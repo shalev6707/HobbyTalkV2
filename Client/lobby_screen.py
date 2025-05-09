@@ -26,12 +26,14 @@ class LobbyScreen(BaseScreen):
 
     def fetch_matches(self):
         response = self.client.send_request("matching", {"username": self.username})
-        if isinstance(response, dict):
+
+        if response and isinstance(response, list):
             self.match_list.delete(0, tk.END)
-            for user, data in response.items():
-                bio = data["bio"]
-                score = data["score"]
-                self.match_list.insert(tk.END, f"{user} - {bio} - {score} shared hobbies")
+            for match in response:
+                user = match["username"]
+                score = match["score"]
+                bio = match["bio"]
+                self.match_list.insert(tk.END, f"{user} - {score} shared hobbies - Bio: {bio}")
         else:
             messagebox.showerror("Error", "Failed to retrieve matches.")
 
