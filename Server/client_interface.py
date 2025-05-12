@@ -4,6 +4,7 @@ class ClientInterface:
     def __init__(self, client_socket: socket.socket, client_addr: tuple):
         self.client_socket = client_socket
         self.client_addr = client_addr
+        self.username = None
 
     def get_request(self) -> dict or None:
         """
@@ -24,19 +25,21 @@ class ClientInterface:
             print("Error receiving data:", e)
             return None
 
-    def send_response(self, cmd:str, code: int, msg: str) -> bool:
+    def send_response(self, cmd:str, code: int, msg: str, data={}) -> bool:
         """
         send a response to the client
         :param cmd: request cmd
         :param code: status code
         :param msg: status code information
+        :param data: response data
         :return: true if response was sent, false otherwise
         """
 
         response = {
             "cmd": cmd,
             "code": code,
-            "msg": msg
+            "msg": msg,
+            "data": data
         }
         response = json.dumps(response).encode()
         sent = self.client_socket.send(response)
