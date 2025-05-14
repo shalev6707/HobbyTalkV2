@@ -1,4 +1,5 @@
 from default import *
+from Client.call__handler import CallHandler
 
 class ClientInterface:
     def __init__(self, client_socket: socket.socket, client_addr: tuple):
@@ -44,4 +45,11 @@ class ClientInterface:
         response = json.dumps(response).encode()
         sent = self.client_socket.send(response)
         return sent == len(response)
+
+def on_call_accepted(encryption_key, peer_ip, peer_port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((peer_ip, peer_port))  # Peer should be listening here
+
+    call = CallHandler(sock, encryption_key, (peer_ip, peer_port))
+    call.start_call()
 

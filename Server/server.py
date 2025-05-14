@@ -13,6 +13,25 @@ class Server:
         self.active_users = []
         self.call_requests = {}
 
+    def get_client_socket(self, username2):
+        """
+        Helper function to get the socket of a client by username.
+        """
+        # Assuming the client is tracked by their socket in some form
+        for client in self.active_users:
+            if client.username == username2:
+                return client.client_socket
+        return None
+
+    def get_client_by_username(self, username2):
+        """
+        Helper function to retrieve the client object by username.
+        """
+        for client in self.active_users:
+            if client.username == username2:
+                return client
+        return None
+
     def run(self):
         """
         Runs the server
@@ -121,7 +140,36 @@ class Server:
                     self.call_requests[receiver] = client.username
                     client.send_response("call", 200, "Call was successful")
 
+                elif request["cmd"] == "call_accepted":
+                    receiver = request["data"]["username"]
+                    caller_username = self.call_requests.get(client.username)
 
+                    if caller_username == receiver:
+                        # Notify caller that the call was accepted
+                        for thread in threading.enumerate():
+                            if isinstance(thread, threading.Thread) and hasattr(thread, 'client_interface'):
+                                other_client = thread.client_interface
+                                if other_client.username == receiver:
+                                    other_client.send_response("call_accepted", 200, "Call accepted by user.")
+                                    break
+                        client.send_response("call_accepted", 200, "Call started.")
+                    else:
+                        client.send_response("call_accepted", 403, "Call not found or already expired.")
+
+                elif request["cmd"] == "call_declined":
+                    receiver = request["data"]["username"]
+                    if receiver in self.call_requests.get(client.username,[]):
+                        # Remove the call request from the server
+                        del self.call_requests[client.username]
+                        client.send_response("call_declined", 200, "Call request declined")
+
+                        # Inform the calling client that the call was declined
+                        calling_client = self.get_client_by_username(receiver)
+                        if calling_client:
+                            calling_client.send_response("call_declined", 200, "Your call request was declined")
+                        print(f"Call from {client.username} to {receiver} declined.")
+                    else:
+                        client.send_response("call_declined", 404, "Call not found")
 
                 elif request["cmd"] == "logout":
                     username = request["data"].get("username")
@@ -143,6 +191,8 @@ class Server:
         # Close client socket when done
         client.client_socket.close()
         print("Client connection closed")
+
+
 
 
 if __name__ == '__main__':
