@@ -1,5 +1,3 @@
-
-
 from Client.lobby_screen import LobbyScreen
 from Server.DataBase.DatabaseManager import DBManager
 from default import *
