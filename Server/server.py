@@ -11,6 +11,8 @@ class Server:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
         self.active_users = []
+        self.call_requests = {}
+        self.connected_clients = {}
 
     def run(self):
         """
@@ -77,6 +79,8 @@ class Server:
                     if username in users and users[username]["password"] == password and username not in self.active_users:
                         client.send_response("login", 200, "Login successful")
                         self.active_users.append(username)
+                        self.connected_clients[username] = client
+                        client.username = username
                         print(self.active_users)
                     else:
                         client.send_response("login", 401, "Invalid username or password")
@@ -107,7 +111,29 @@ class Server:
 
                     # Sort matches by score descending
                     matches.sort(key=lambda x: x["score"], reverse=True)
-                    client.send_response("matching", 200, str(matches))
+                    client.send_response("matching", 200, "matching successful",{"matches": matches, "call_requests": (self.call_requests[username] if username in self.call_requests else [])})
+
+                elif request["cmd"] == "call":
+                    receiver = request["data"]["username"]
+                    caller_ip = client.client_addr[0]
+                    print(receiver)
+                    if receiver not in self.active_users:
+                        client.send_response("matching", 404, "User not found")
+                        return
+
+                    self.call_requests[receiver] = (client.username, caller_ip)[0]
+                    client.send_response("call", 200, "Call was successful")
+
+                elif request["cmd"] == "accept_call":
+                    caller_username = request["data"]["username"]
+                    receiver_ip = client.client_addr[0]
+                    receiver_username = client.username
+                    caller_ip = self.connected_clients[caller_username].addr[0]
+                    caller_client = self.connected_clients[receiver_username]
+                    caller_client.send_response("accept_call", 200, "Call accepted")
+
+
+
 
 
                 elif request["cmd"] == "logout":
