@@ -8,7 +8,7 @@ from encryptions import *
 
 class Server:
     def __init__(self):
-        self.host = "127.0.0.1"
+        self.host = "0.0.0.0"
         self.port = 8080
 
         # Create a socket
@@ -138,11 +138,44 @@ class Server:
 
                 elif request["cmd"] == "accept_call":
                     caller_username = request["data"]["username"]
-                    receiver_ip = client.client_addr[0]
-                    receiver_username = client.username
-                    caller_ip = self.connected_clients[caller_username].addr[0]
-                    caller_client = self.connected_clients[receiver_username]
-                    caller_client.send_response("accept_call", 200, "Call accepted")
+                    receiver_username = client.username  # the one who accepted the call
+
+                    # Get both client sockets
+                    caller_client = self.connected_clients.get(caller_username)
+                    receiver_client = self.connected_clients.get(receiver_username)
+
+                    if not caller_client or not receiver_client:
+                        client.send_response("accept_call", 404, "Caller or receiver not found")
+                        return
+
+                    # IPs and ports for communication
+                    caller_ip = caller_client.addr[0]
+                    receiver_ip = receiver_client.addr[0]
+                    audio_port = 5555  # Or dynamically assign if needed
+
+                    # Send 'call_screen' to caller
+                    caller_client.send_response("call_screen", 200, "Call accepted", {
+                        "partner_username": receiver_username,
+                        "ip": receiver_ip,
+                        "port": audio_port
+                    })
+
+                    # Send 'call_screen' to receiver
+                    receiver_client.send_response("call_screen", 200, "Call accepted", {
+                        "partner_username": caller_username,
+                        "ip": caller_ip,
+                        "port": audio_port
+                    })
+
+
+                elif request["cmd"] == "decline_call":
+                    caller_username = request["data"]["username"]
+                    caller_client = self.connected_clients.get(caller_username)
+
+                    if caller_client:
+                        caller_client.send_response("call_declined", 200, "Call declined")
+
+                    client.send_response("call_declined", 200, "Call declined")
 
 
 
