@@ -73,7 +73,7 @@ class App:
         users = DBManager.read("users.json")
         status = self.client.send_request("logout", {"username": username})
         if status:
-            print("Logout successful!!")
+            print("Logout successful!")
             self.username = None
             self.clear_screen()
             self.show_login_screen()
