@@ -1,6 +1,10 @@
 from Server.DataBase.DatabaseManager import DBManager
 from default import *
 from Server.client_interface import ClientInterface
+import hashlib
+
+from encryptions import *
+
 
 class Server:
     def __init__(self):
@@ -10,6 +14,8 @@ class Server:
         # Create a socket
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.host, self.port))
+
+
         self.active_users = []
         self.call_requests = {}
         self.connected_clients = {}
@@ -25,6 +31,11 @@ class Server:
             sock, addr = self.socket.accept()
             client = ClientInterface(sock,addr)
             threading.Thread(target=self.handle_client, args=[client]).start()
+
+
+    def hash_password(self,password):
+        return hashlib.sha256(password.encode()).hexdigest()
+
 
     def handle_client(self, client: ClientInterface):
         """
@@ -61,9 +72,10 @@ class Server:
                     if username in data:
                         client.send_response("register", 409, "Username already exists.")
                     else:
+
                         data[username] = {
                             "username": username,
-                            "password": password,
+                            "password": self.hash_password(password),
                             "bio": bio,
                             "hobbies": hobbies
                         }
@@ -76,7 +88,7 @@ class Server:
                     password = request["data"]["password"]
                     users = DBManager.read("users.json")
 
-                    if username in users and users[username]["password"] == password and username not in self.active_users:
+                    if username in users and users[username]["password"] ==self.hash_password(password) and username not in self.active_users:
                         client.send_response("login", 200, "Login successful")
                         self.active_users.append(username)
                         self.connected_clients[username] = client

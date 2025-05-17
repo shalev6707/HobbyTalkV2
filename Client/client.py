@@ -1,6 +1,7 @@
 from typing import Tuple
 
 from default import *
+from encryptions import *
 
 class Client:
     def __init__(self):
@@ -18,24 +19,34 @@ class Client:
             return False, {}
 
         try:
+            # Prepare request message
             message = {
                 "cmd": cmd,
                 "data": data
             }
-            self.sock.sendall(json.dumps(message).encode())
-            response = self.sock.recv(1024).decode()
 
-            if not response:
+            # Convert to JSON and encrypt
+            json_message = json.dumps(message)
+            encrypted_message = encrypt_message(json_message)
+            print(encrypted_message)
+
+            # Send encrypted message
+            self.sock.sendall(encrypted_message)
+
+            # Receive and decrypt response
+            encrypted_response = self.sock.recv(4096)  # Consider increasing buffer size
+            decrypted_response = decrypt_message(encrypted_response)  # Returns string
+
+            if not decrypted_response:
                 return False, {}
 
-            response_data = json.loads(response)
+            response_data = json.loads(decrypted_response)  # Convert JSON string to dict
             success = response_data.get("code") == 200
             return success, response_data.get("data", {})
 
         except Exception as e:
             print("Send request error:", e)
             return False, {}
-
 
 if __name__ == '__main__':
     client = Client()

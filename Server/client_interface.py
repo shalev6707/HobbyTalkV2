@@ -1,5 +1,7 @@
 from default import *
 
+from encryptions import *
+
 class ClientInterface:
     def __init__(self, client_socket: socket.socket, client_addr: tuple):
         self.client_socket = client_socket
@@ -17,10 +19,12 @@ class ClientInterface:
         :return: dict of requests or None
         """
         try:
-            data = self.client_socket.recv(1024).decode()
+            data = self.client_socket.recv(1024)
+            print(data)
+            data = decrypt_message(data)  # Returns a decrypted string (JSON)
             if not data:
                 return None
-            return json.loads(data)
+            return json.loads(data)  # Convert JSON string to dict
         except Exception as e:
             print("Error receiving data:", e)
             return None
@@ -41,7 +45,9 @@ class ClientInterface:
             "msg": msg,
             "data": data
         }
-        response = json.dumps(response).encode()
-        sent = self.client_socket.send(response)
+        response = json.dumps(response)
+        sent = self.client_socket.send(encrypt_message(str(response)))
+
         return sent == len(response)
+
 
