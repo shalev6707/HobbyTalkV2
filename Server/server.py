@@ -9,7 +9,7 @@ from encryptions import *
 
 class Server:
     def __init__(self):
-        self.host = "0.0.0.0"
+        self.host = "192.168.22.131"
         self.port = 8080
 
         # Create a socket
