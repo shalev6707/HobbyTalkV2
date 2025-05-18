@@ -1,9 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
-
+from Server.client_interface import ClientInterface
 from Client import client
 from base_screen import BaseScreen
 import json
+from encryptions import *
 
 
 class LobbyScreen(BaseScreen):
@@ -44,6 +45,11 @@ class LobbyScreen(BaseScreen):
             if not success:
                 messagebox.showerror("Error", "Failed to retrieve matches.")
                 return
+            try:
+                if response_data["cmd"] == "call_accepted":
+                    self.app.handle_call_accepted(response_data)
+            except:
+                pass
 
             # Now decode the match data (which should still be a JSON string)
             match_data = response_data["matches"]
@@ -54,9 +60,9 @@ class LobbyScreen(BaseScreen):
                 display_text = f"{match['username']} - {match['score']} shared hobbies\nBio: {match['bio']}"
                 self.match_list.insert(tk.END, display_text)
 
-            call_requests = response_data["call_requests"]
+            username = response_data["call_requests"]
 
-            for username in call_requests:
+            if type(username) == str:
                 print(username)
                 IncomingCallPopup(self.frame, username, self.on_accept, self.on_decline)
             self.frame.after(10000, self.fetch_matches)
@@ -78,8 +84,10 @@ class LobbyScreen(BaseScreen):
 
 
 
+
     def on_accept(self, username):
-        self.client.send_request("accept_call", {"username": username})
+        response = self.client.send_request("accept_call", {"username": username})
+        self.app.handle_call_accepted(response)
 
     def on_decline(self, username):
         self.client.send_request("decline_call", {"username": username})

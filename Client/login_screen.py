@@ -3,7 +3,6 @@ import tkinter as tk
 from Server.DataBase.DatabaseManager import DBManager
 from base_screen import BaseScreen
 from tkinter import messagebox
-from Server import server
 
 
 class LoginScreen(BaseScreen):

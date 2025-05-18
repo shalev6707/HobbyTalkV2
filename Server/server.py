@@ -2,6 +2,7 @@ from Server.DataBase.DatabaseManager import DBManager
 from default import *
 from Server.client_interface import ClientInterface
 import hashlib
+from vidstream import *
 
 from encryptions import *
 
@@ -138,35 +139,29 @@ class Server:
 
                 elif request["cmd"] == "accept_call":
                     caller_username = request["data"]["username"]
-                    receiver_username = client.username  # the one who accepted the call
+                    receiver_username = client.username
 
-                    # Get both client sockets
-                    caller_client = self.connected_clients.get(caller_username)
-                    receiver_client = self.connected_clients.get(receiver_username)
+                    caller_client = self.connected_clients[caller_username]
+                    receiver_client = self.connected_clients[receiver_username]
 
-                    if not caller_client or not receiver_client:
-                        client.send_response("accept_call", 404, "Caller or receiver not found")
-                        return
+                    caller_ip = caller_client.client_addr[0]
+                    receiver_ip = receiver_client.client_addr[0]
 
-                    # IPs and ports for communication
-                    caller_ip = caller_client.addr[0]
-                    receiver_ip = receiver_client.addr[0]
-                    audio_port = 5555  # Or dynamically assign if needed
+                    print(caller_ip)
+                    print(receiver_ip)
 
-                    # Send 'call_screen' to caller
-                    caller_client.send_response("call_screen", 200, "Call accepted", {
-                        "partner_username": receiver_username,
-                        "ip": receiver_ip,
-                        "port": audio_port
+                    # Notify both clients with each other's IP
+                    caller_client.send_response("call_accepted", 200, "Call accepted", {
+                        "peer_ip": receiver_ip,
+                        "peer_username": receiver_username
                     })
 
-                    # Send 'call_screen' to receiver
-                    receiver_client.send_response("call_screen", 200, "Call accepted", {
-                        "partner_username": caller_username,
-                        "ip": caller_ip,
-                        "port": audio_port
+                    receiver_client.send_response("call_accepted", 200, "Call accepted", {
+                        "peer_ip": caller_ip,
+                        "peer_username": caller_username
                     })
 
+                    self.call_requests = []
 
                 elif request["cmd"] == "decline_call":
                     caller_username = request["data"]["username"]
@@ -176,6 +171,8 @@ class Server:
                         caller_client.send_response("call_declined", 200, "Call declined")
 
                     client.send_response("call_declined", 200, "Call declined")
+
+                    self.call_requests = []
 
 
 
