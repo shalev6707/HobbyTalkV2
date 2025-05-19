@@ -22,12 +22,9 @@ class LobbyScreen(BaseScreen):
         self.create_widgets()
         self.fetch_matches()
 
-
     def handle_call_accepted(self, response):
-        print(234)
-        print(response)
         receiver = AudioReceiver(socket.gethostbyname(socket.gethostname()), 1238)
-        sender = AudioSender(response[1]["peer_ip"], 1238)
+        sender = AudioSender(response["peer_ip"], 1238)
 
         threading.Thread(target=receiver.start_server).start()
         threading.Thread(target=sender.start_stream).start()
@@ -45,36 +42,31 @@ class LobbyScreen(BaseScreen):
         self.logout_button = tk.Button(self.frame, text="Logout", command=self.logout)
         self.logout_button.pack(pady=5)
 
-
     def fetch_matches(self):
         try:
             success, response_data = self.client.send_request("matching", {"username": self.username})
-            print(response_data)
             if not success:
                 messagebox.showerror("Error", "Failed to retrieve matches.")
                 return
             try:
-                if response_data["cmd"] == "call_accepted":
+                if response_data["peer_ip"]:
                     self.handle_call_accepted(response_data)
-                    print(123)
             except:
-                pass
-
             # Now decode the match data (which should still be a JSON string)
-            match_data = response_data["matches"]
+                match_data = response_data["matches"]
 
-            self.match_list.delete(0, tk.END)
-            self.matches = [match["username"] for match in match_data]
-            for match in match_data:
-                display_text = f"{match['username']} - {match['score']} shared hobbies\nBio: {match['bio']}"
-                self.match_list.insert(tk.END, display_text)
+                self.match_list.delete(0, tk.END)
+                self.matches = [match["username"] for match in match_data]
+                for match in match_data:
+                    display_text = f"{match['username']} - {match['score']} shared hobbies\nBio: {match['bio']}"
+                    self.match_list.insert(tk.END, display_text)
 
-            username = response_data["call_requests"]
+                username = response_data["call_requests"]
 
-            if type(username) == str:
-                print(username)
-                IncomingCallPopup(self.frame, username, self.on_accept, self.on_decline)
-            self.frame.after(10000, self.fetch_matches)
+                if type(username) == str:
+                    print(username)
+                    IncomingCallPopup(self.frame, username, self.on_accept, self.on_decline)
+                self.frame.after(10000, self.fetch_matches)
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to retrieve matches: {e}")
@@ -90,17 +82,18 @@ class LobbyScreen(BaseScreen):
             success, response_data = self.client.send_request("call", {"username": selected_username})
             if not success:
                 messagebox.showerror("Error", "call failed")
-
-
-
+            try:
+                if response_data["cmd"] == "call_accepted":
+                    self.handle_call_accepted(response_data)
+            except:
+                pass
 
     def on_accept(self, username):
         response = self.client.send_request("accept_call", {"username": username})
-        self.handle_call_accepted(response)
+        self.handle_call_accepted(response[1])
 
     def on_decline(self, username):
         self.client.send_request("decline_call", {"username": username})
-
 
 
 class IncomingCallPopup(tk.Toplevel):
@@ -131,7 +124,3 @@ class IncomingCallPopup(tk.Toplevel):
     def respond(self, accepted, callback):
         self.destroy()
         callback(self.caller_username)
-
-
-
-

@@ -20,7 +20,6 @@ class ClientInterface:
         """
         try:
             data = self.client_socket.recv(1024)
-            print(data)
             data = decrypt_message(data)  # Returns a decrypted string (JSON)
             if not data:
                 return None

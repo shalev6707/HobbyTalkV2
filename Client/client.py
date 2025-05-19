@@ -28,7 +28,6 @@ class Client:
             # Convert to JSON and encrypt
             json_message = json.dumps(message)
             encrypted_message = encrypt_message(json_message)
-            print(encrypted_message)
 
             # Send encrypted message
             self.sock.sendall(encrypted_message)
@@ -42,6 +41,8 @@ class Client:
 
             response_data = json.loads(decrypted_response)  # Convert JSON string to dict
             success = response_data.get("code") == 200
+            print(response_data)
+
             return success, response_data.get("data", {})
 
         except Exception as e:

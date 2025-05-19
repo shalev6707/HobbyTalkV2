@@ -3,7 +3,6 @@ from default import *
 from Server.client_interface import ClientInterface
 import hashlib
 from vidstream import *
-
 from encryptions import *
 
 
@@ -148,6 +147,7 @@ class Server:
                     receiver_ip = receiver_client.client_addr[0]
 
                     print(caller_ip)
+                    print(caller_client.username)
                     print(receiver_ip)
 
                     # Notify both clients with each other's IP
@@ -160,9 +160,6 @@ class Server:
                         "peer_ip": caller_ip,
                         "peer_username": caller_username
                     })
-
-                    print(receiver_ip)
-                    print(caller_ip)
 
                     self.call_requests = []
 
