@@ -5,7 +5,7 @@ from encryptions import *
 
 class Client:
     def __init__(self):
-        self.svr_host = "192.168.1.125"
+        self.svr_host = "192.168.1.144"
         self.svr_port = 8080
         try:
             self.sock = socket.socket()

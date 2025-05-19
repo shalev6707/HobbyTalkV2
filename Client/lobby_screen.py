@@ -25,13 +25,29 @@ class LobbyScreen(BaseScreen):
         self.fetch_matches()
 
     def handle_call_accepted(self, response_data, port1, port2):
+        """Start receiver, then safely attempt to start sender."""
         my_ip = socket.gethostbyname(socket.gethostname())
         receiver = AudioReceiver(my_ip, port1)
         sender = AudioSender(response_data.get("peer_ip"), port2)
 
+        # Start listening thread
         threading.Thread(target=receiver.start_server, daemon=True).start()
         time.sleep(1)
-        threading.Thread(target=sender.start_stream, daemon=True).start()
+
+        # Wrap sender in try/except to prevent thread crash on TimeoutError
+        def _safe_send():
+            try:
+                sender.start_stream()
+            except Exception as e:
+                print("AudioSender error:", e)
+                messagebox.showerror(
+                    "Audio Error",
+                    f"Could not connect to peer at {response_data.get('peer_ip')}:{port2}.\n"
+                    "Please check that the other user accepted the call,\n"
+                    "that IP/port are correct, and no firewall is blocking you."
+                )
+
+        threading.Thread(target=_safe_send, daemon=True).start()
 
     def create_widgets(self):
         tk.Label(self.frame, text=f"Welcome, {self.username}!", font=("Arial", 16)).pack(pady=10)
@@ -54,19 +70,18 @@ class LobbyScreen(BaseScreen):
                 return
 
             # Populate matches
-            match_data = response_data.get("matches", [])
             self.match_list.delete(0, tk.END)
             self.matches = []
-            for match in match_data:
-                display_text = f"{match['username']} - {match['score']} shared hobbies\nBio: {match['bio']}"
-                self.match_list.insert(tk.END, display_text)
-                self.matches.append(match['username'])
+            for match in response_data.get("matches", []):
+                text = f"{match['username']} - {match['score']} shared hobbies\nBio: {match['bio']}"
+                self.match_list.insert(tk.END, text)
+                self.matches.append(match["username"])
 
-            # Check for incoming call
+            # Handle incoming call request
             call_req = response_data.get("call_requests")
-            if isinstance(call_req, str):
-                self.caller_ip = response_data.get("caller_ip")
-                IncomingCallPopup(self.frame, call_req, self.on_accept, self.on_decline)
+            if isinstance(call_req, dict):
+                self.caller_ip = call_req.get("caller_ip")
+                IncomingCallPopup(self.frame, call_req["caller_username"], self.on_accept, self.on_decline)
 
             # Poll again after 10s
             self.frame.after(10000, self.fetch_matches)
@@ -75,20 +90,30 @@ class LobbyScreen(BaseScreen):
             messagebox.showerror("Error", f"Failed to retrieve matches: {e}")
 
     def logout(self):
-        confirm = messagebox.askyesno("Logout", "Are you sure you want to logout?")
-        if confirm:
+        if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
             self.app.handle_logout(self.username)
 
     def call(self):
-        if self.match_list.curselection():
-            selected = self.matches[self.match_list.curselection()[0]]
-            success, _ = self.client.send_request("call", {"username": selected})
-            if not success:
-                messagebox.showerror("Error", "Call failed.")
+        """Initiate a call and start listening before the peer connects back."""
+        if not self.match_list.curselection():
+            return
+
+        selected = self.matches[self.match_list.curselection()[0]]
+        success, _ = self.client.send_request("call", {"username": selected})
+        if not success:
+            messagebox.showerror("Error", "Call failed.")
+            return
+
+        # Start receiver *before* the other side streams back
+        my_ip = socket.gethostbyname(socket.gethostname())
+        CALL_LISTEN_PORT = 1239  # must match callee's AudioSender port
+        receiver = AudioReceiver(my_ip, CALL_LISTEN_PORT)
+        threading.Thread(target=receiver.start_server, daemon=True).start()
 
     def on_accept(self, caller_username):
         success, response_data = self.client.send_request("accept_call", {"username": caller_username})
         if success:
+            # After acceptance, connect out to the caller
             self.handle_call_accepted(response_data, 1238, 1239)
 
     def on_decline(self, caller_username):
@@ -99,8 +124,7 @@ class IncomingCallPopup(tk.Toplevel):
     def __init__(self, parent, caller_username, on_accept, on_decline):
         super().__init__(parent)
         self.title("Incoming Call")
-        self.label = tk.Label(self, text=f"{caller_username} is calling you...")
-        self.label.pack(padx=20, pady=10)
+        tk.Label(self, text=f"{caller_username} is calling you...").pack(padx=20, pady=10)
         btn_frame = tk.Frame(self)
         btn_frame.pack(pady=10)
         tk.Button(btn_frame, text="Accept",
