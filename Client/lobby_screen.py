@@ -5,6 +5,9 @@ from Client import client
 from base_screen import BaseScreen
 import json
 from encryptions import *
+from vidstream import AudioSender, AudioReceiver
+import socket
+import threading
 
 
 class LobbyScreen(BaseScreen):
@@ -20,7 +23,14 @@ class LobbyScreen(BaseScreen):
         self.fetch_matches()
 
 
+    def handle_call_accepted(self, response):
+        print(234)
+        print(response)
+        receiver = AudioReceiver(socket.gethostbyname(socket.gethostname()), 1238)
+        sender = AudioSender(response[1]["peer_ip"], 1238)
 
+        threading.Thread(target=receiver.start_server).start()
+        threading.Thread(target=sender.start_stream).start()
 
     def create_widgets(self):
         tk.Label(self.frame, text=f"Welcome, {self.username}!", font=("Arial", 16)).pack(pady=10)
@@ -36,8 +46,6 @@ class LobbyScreen(BaseScreen):
         self.logout_button.pack(pady=5)
 
 
-
-
     def fetch_matches(self):
         try:
             success, response_data = self.client.send_request("matching", {"username": self.username})
@@ -47,7 +55,8 @@ class LobbyScreen(BaseScreen):
                 return
             try:
                 if response_data["cmd"] == "call_accepted":
-                    self.app.handle_call_accepted(response_data)
+                    self.handle_call_accepted(response_data)
+                    print(123)
             except:
                 pass
 
@@ -87,7 +96,7 @@ class LobbyScreen(BaseScreen):
 
     def on_accept(self, username):
         response = self.client.send_request("accept_call", {"username": username})
-        self.app.handle_call_accepted(response)
+        self.handle_call_accepted(response)
 
     def on_decline(self, username):
         self.client.send_request("decline_call", {"username": username})

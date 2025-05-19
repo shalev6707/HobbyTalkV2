@@ -3,7 +3,6 @@ import socket
 from Client.lobby_screen import LobbyScreen
 from Server.DataBase.DatabaseManager import DBManager
 from default import *
-from vidstream import AudioSender, AudioReceiver
 import threading
 
 class App:
@@ -82,17 +81,6 @@ class App:
             self.clear_screen()
             self.show_login_screen()
             messagebox.showinfo("Logout", "Logout successful!")
-
-
-
-    def handle_call_accepted(self, response):
-
-        print(response)
-        receiver = AudioReceiver(socket.gethostbyname(socket.gethostname()), 1238)
-        sender = AudioSender(response[1]["peer_ip"], 1238)
-
-        threading.Thread(target=receiver.start_server).start()
-        threading.Thread(target=sender.start_stream).start()
 
 
 if __name__ == '__main__':

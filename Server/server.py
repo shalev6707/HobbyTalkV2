@@ -9,7 +9,7 @@ from encryptions import *
 
 class Server:
     def __init__(self):
-        self.host = "192.168.22.131"
+        self.host = "192.168.1.125"
         self.port = 8080
 
         # Create a socket
@@ -160,6 +160,9 @@ class Server:
                         "peer_ip": caller_ip,
                         "peer_username": caller_username
                     })
+
+                    print(receiver_ip)
+                    print(caller_ip)
 
                     self.call_requests = []
 
