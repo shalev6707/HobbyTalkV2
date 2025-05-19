@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 from tkinter import messagebox
 from Server.client_interface import ClientInterface
@@ -27,6 +28,7 @@ class LobbyScreen(BaseScreen):
         sender = AudioSender(response["peer_ip"], port2)
 
         threading.Thread(target=receiver.start_server).start()
+        time.sleep(1)
         threading.Thread(target=sender.start_stream).start()
 
     def create_widgets(self):
