@@ -22,9 +22,9 @@ class LobbyScreen(BaseScreen):
         self.create_widgets()
         self.fetch_matches()
 
-    def handle_call_accepted(self, response):
-        receiver = AudioReceiver(socket.gethostbyname(socket.gethostname()), 1238)
-        sender = AudioSender(response["peer_ip"], 1238)
+    def handle_call_accepted(self, response, port1, port2):
+        receiver = AudioReceiver(socket.gethostbyname(socket.gethostname()), port1)
+        sender = AudioSender(response["peer_ip"], port2)
 
         threading.Thread(target=receiver.start_server).start()
         threading.Thread(target=sender.start_stream).start()
@@ -50,7 +50,7 @@ class LobbyScreen(BaseScreen):
                 return
             try:
                 if response_data["peer_ip"]:
-                    self.handle_call_accepted(response_data)
+                    self.handle_call_accepted(response_data, 1238, 1239)
             except:
             # Now decode the match data (which should still be a JSON string)
                 match_data = response_data["matches"]
@@ -82,15 +82,10 @@ class LobbyScreen(BaseScreen):
             success, response_data = self.client.send_request("call", {"username": selected_username})
             if not success:
                 messagebox.showerror("Error", "call failed")
-            try:
-                if response_data["cmd"] == "call_accepted":
-                    self.handle_call_accepted(response_data)
-            except:
-                pass
 
     def on_accept(self, username):
         response = self.client.send_request("accept_call", {"username": username})
-        self.handle_call_accepted(response[1])
+        self.handle_call_accepted(response[1], 1239, 1238)
 
     def on_decline(self, username):
         self.client.send_request("decline_call", {"username": username})
